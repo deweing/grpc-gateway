@@ -84,7 +84,7 @@ $(GENERATE_UNBOUND_METHODS_EXAMPLE_SRCS): $(GENERATE_UNBOUND_METHODS_EXAMPLE_SPE
 install:
 	go install github.com/bufbuild/buf/cmd/buf@v1.3.1
 	go install \
-		./protoc-gen-openapiv2 \
+		./protoc-gen-openapiv3 \
 		./protoc-gen-grpc-gateway
 
 proto:
@@ -144,4 +144,20 @@ clean:
 	find . -type f -name '*.pb.gw.go' -delete
 	rm -f $(EXAMPLE_CLIENT_SRCS)
 
-.PHONY: generate test clean proto install
+
+openapiv3-proto:
+	docker run --rm -v ${PWD}:/go/src -w /go/src registry.cn-hangzhou.aliyuncs.com/dengwei/protoc:1.27.1 protoc \
+	 	-I=/go/src --proto_path=./protoc-gen-openapiv3/options --go_out=./protoc-gen-openapiv3/options ./protoc-gen-openapiv3/options/openapiv3.proto && \
+	docker run --rm -v ${PWD}:/go/src -w /go/src registry.cn-hangzhou.aliyuncs.com/dengwei/protoc:1.27.1 protoc \
+	 	-I=/go/src --proto_path=./protoc-gen-openapiv3/options --go_out=./protoc-gen-openapiv3/options ./protoc-gen-openapiv3/options/annotations.proto && \
+	mv ./protoc-gen-openapiv3/options/github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv3/options/*.pb.go ./protoc-gen-openapiv3/options && \
+    rm -rf ./protoc-gen-openapiv3/options/github.com && \
+    docker run --rm -v ${PWD}:/go/src -w /go/src registry.cn-hangzhou.aliyuncs.com/dengwei/protoc:1.27.1 protoc \
+      	-I=/go/src --proto_path=./internal/descriptor/openapiconfig/ --go_out=./internal/descriptor/openapiconfig/ ./internal/descriptor/openapiconfig/openapiconfig.proto && \
+    mv ./internal/descriptor/openapiconfig/github.com/grpc-ecosystem/grpc-gateway/v2/internal/descriptor/openapiconfig/*.pb.go ./internal/descriptor/openapiconfig && \
+        rm -rf ./internal/descriptor/openapiconfig/github.com
+
+openapiv3-install:
+	go install ./protoc-gen-openapiv3
+
+.PHONY: generate test clean proto install openapiv3-proto openapiv3-install
